@@ -1,0 +1,460 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+<title>HOLLOW — Launcher MM2 (Sync)</title>
+<style>
+  * { margin: 0; padding: 0; box-sizing: border-box; -webkit-tap-highlight-color: transparent; }
+  body {
+    background: #0e0c14;
+    color: #e8e2f0;
+    font-family: 'Segoe UI', system-ui, -apple-system, sans-serif;
+    min-height: 100vh;
+    padding: 24px 16px;
+  }
+  .wrap { max-width: 560px; margin: 0 auto; }
+  .brand { display: flex; align-items: center; gap: 12px; margin-bottom: 24px; }
+  .brand-mark {
+    width: 42px; height: 42px; background: #b48cff; border-radius: 12px;
+    display: flex; align-items: center; justify-content: center;
+    font-weight: 800; font-size: 22px; color: #0e0c14;
+    box-shadow: 0 0 24px rgba(180,140,255,0.4);
+  }
+  .brand h1 { font-size: 20px; font-weight: 700; }
+  .brand p { font-size: 12px; color: #8c849c; margin-top: 2px; }
+  .card {
+    background: #1a1720;
+    border: 1px solid rgba(180,140,255,0.15);
+    border-radius: 16px;
+    padding: 24px;
+    box-shadow: 0 20px 60px rgba(0,0,0,0.4);
+  }
+  .tabs { display: flex; gap: 6px; margin-bottom: 20px; background: #221e2c; padding: 4px; border-radius: 10px; }
+  .tab {
+    flex: 1; padding: 10px; text-align: center; font-size: 13px; font-weight: 600;
+    color: #8c849c; border-radius: 7px; cursor: pointer;
+    -webkit-user-select: none; user-select: none;
+  }
+  .tab.active { background: #b48cff; color: #0e0c14; }
+  .pane { display: none; }
+  .pane.active { display: block; }
+
+  .label {
+    font-size: 12px; color: #8c849c; margin-bottom: 8px;
+    text-transform: uppercase; letter-spacing: 0.8px; font-weight: 600;
+  }
+  .keybox {
+    background: #221e2c; border: 1px solid rgba(180,140,255,0.2);
+    border-radius: 10px; padding: 16px 18px;
+    font-family: Consolas, Monaco, monospace; font-size: 15px;
+    color: #b48cff; word-break: break-all;
+    margin-bottom: 10px; min-height: 52px;
+    display: flex; align-items: center; justify-content: center;
+    text-align: center; letter-spacing: 1px;
+  }
+  .keybox.empty { color: #8c849c; font-style: italic; }
+  .countdown, .cooldown {
+    background: #221e2c; border-radius: 8px; padding: 10px;
+    text-align: center; font-family: Consolas, monospace;
+    font-size: 13px; color: #8c849c; margin-bottom: 10px;
+    display: none;
+  }
+  .countdown strong { color: #50dc78; font-size: 15px; }
+  .cooldown { border: 1px solid rgba(255,176,64,0.3); color: #ffb040; }
+  .cooldown strong { color: #ffb040; font-size: 15px; }
+
+  .sync-badge {
+    display: none; background: rgba(80, 220, 120, 0.08);
+    border: 1px solid rgba(80, 220, 120, 0.3);
+    border-radius: 8px; padding: 8px 10px;
+    font-size: 11px; color: #50dc78;
+    text-align: center; margin-bottom: 10px;
+    font-family: Consolas, monospace;
+  }
+  .sync-badge.show { display: block; }
+
+  .btn {
+    width: 100%; padding: 14px; border: none; border-radius: 10px;
+    font-size: 14px; font-weight: 700; cursor: pointer; letter-spacing: 0.3px;
+    transition: background 0.2s; text-transform: uppercase;
+  }
+  .btn-primary { background: #b48cff; color: #0e0c14; box-shadow: 0 8px 24px rgba(180,140,255,0.25); }
+  .btn-primary:active { background: #c6a3ff; }
+  .btn-primary:disabled { background: #3a3448; color: #8c849c; cursor: not-allowed; box-shadow: none; }
+
+  .btn-game {
+    background: #00b06f; color: #ffffff; margin-top: 10px;
+    box-shadow: 0 8px 24px rgba(0, 176, 111, 0.25);
+    display: flex; align-items: center; justify-content: center; gap: 8px;
+  }
+  .btn-game:active { background: #00d486; }
+
+  .btn-secondary { background: #221e2c; color: #e8e2f0; border: 1px solid rgba(180,140,255,0.2); margin-top: 10px; }
+  .row { display: flex; gap: 10px; }
+
+  .history { margin-top: 12px; max-height: 340px; overflow-y: auto; padding-right: 4px; }
+  .history-item {
+    background: #221e2c; border-radius: 8px; padding: 12px 14px;
+    margin-bottom: 8px; border-left: 3px solid #50dc78;
+  }
+  .history-item.expired { border-left-color: #ff5050; opacity: 0.7; }
+  .history-item.warn { border-left-color: #ffb040; }
+  .history-key { font-family: Consolas, monospace; font-size: 12px; color: #b48cff; word-break: break-all; display: block; margin-bottom: 6px; }
+  .history-meta { display: flex; justify-content: space-between; font-size: 11px; color: #8c849c; font-family: Consolas, monospace; }
+  .empty-history { color: #8c849c; font-size: 13px; text-align: center; padding: 24px; font-style: italic; }
+
+  .debug-panel {
+    background: #0a0810; border: 1px solid rgba(255,80,80,0.3);
+    border-radius: 10px; padding: 12px; margin-top: 20px;
+    font-family: Consolas, monospace; font-size: 10px;
+    color: #b48cff; max-height: 180px; overflow: auto;
+    white-space: pre-wrap; word-break: break-all;
+  }
+  .debug-panel .title { color: #ffb040; font-weight: bold; margin-bottom: 6px; }
+  .debug-panel .error { color: #ff5050; }
+  .debug-panel .ok { color: #50dc78; }
+  .debug-panel .info { color: #b48cff; }
+</style>
+</head>
+<body>
+<div class="wrap">
+  <div class="brand">
+    <div class="brand-mark">H</div>
+    <div>
+      <h1>HOLLOW</h1>
+      <p>MM2 Launcher · Key System</p>
+    </div>
+  </div>
+
+  <div class="card">
+    <div class="tabs">
+      <div class="tab active" onclick="showTab('gen', this)">Gerar Key</div>
+      <div class="tab" onclick="showTab('hist', this)">Histórico</div>
+    </div>
+
+    <div class="pane active" id="pane-gen">
+      <div class="label">Sua Key (válida 24h)</div>
+      <div class="keybox empty" id="keyDisplay">Clique em GERAR KEY</div>
+
+      <div class="countdown" id="countdown">
+        <strong id="cdTime">--:--:--</strong> restantes
+      </div>
+      <div class="sync-badge" id="syncBadge">
+        🔗 Sincronizado com o script (mesma expiração)
+      </div>
+      <div class="cooldown" id="cooldown"><strong>--:--:--</strong> para liberar novo gerador</div>
+
+      <button class="btn btn-primary" id="genBtn" onclick="genKey()">GERAR KEY</button>
+
+      <div class="row" style="margin-top:10px;">
+        <button class="btn btn-secondary" onclick="copyCurrent()" style="margin-top:0;">Copiar Key</button>
+        <button class="btn btn-secondary" onclick="clearKeys()" style="margin-top:0;">Limpar Tudo</button>
+      </div>
+
+      <button class="btn btn-game" onclick="launchGame()">
+        ▶ Abrir Murder Mystery 2
+      </button>
+      <div style="text-align: center; font-size: 11px; color: #8c849c; margin-top: 8px;">
+        O jogo abrirá no Roblox. Depois cole a key no seu executor.
+      </div>
+    </div>
+
+    <div class="pane" id="pane-hist">
+      <div class="label">Keys Recentes</div>
+      <div class="history" id="historyList">
+        <div class="empty-history">nenhuma key gerada</div>
+      </div>
+    </div>
+  </div>
+
+  <div class="debug-panel">
+    <div class="title">STATUS:</div>
+    <div id="debugLog">Pronto.</div>
+  </div>
+</div>
+
+<script>
+// ============ CONFIGURAÇÃO ============
+var STORAGE_KEY  = 'hollow_keys_v10';
+var COOLDOWN_KEY = 'hollow_lastgen_v10';
+var CHARS        = 'ABCDEFGHJKLMNPQRSTUVWXYZ23456789';
+var EPOCH_MS     = Date.UTC(2024, 0, 1);            // 1704067200000 — MESMO do script
+var TTL_MS       = 24 * 60 * 60 * 1000;             // 24h alvo
+var COOLDOWN_MS  = 24 * 60 * 60 * 1000;             // 24h entre keys
+var MM2_PLACE_ID = "142823291";
+
+// ============ SYNC — ENCODE / DECODE EXATO ============
+function encodeExpiry(ms) {
+    var hours = Math.ceil((ms - EPOCH_MS) / 3600000);
+    if (hours < 0) hours = 0;
+    var b = hours.toString(36).toUpperCase();
+    while (b.length < 4) b = '0' + b;
+    return b.slice(-4);
+}
+
+function decodeExpiry(segment) {
+    return EPOCH_MS + parseInt(segment, 36) * 3600000;
+}
+
+// ============ ARMAZENAMENTO SEGURO ============
+var memKeys = [];
+var memLastGen = 0;
+var useMemory = false;
+
+function safeGetItem(key) {
+    if (useMemory) return key === STORAGE_KEY ? JSON.stringify(memKeys) : String(memLastGen);
+    try { return localStorage.getItem(key); }
+    catch(e) { useMemory = true; return null; }
+}
+
+function safeSetItem(key, val) {
+    if (useMemory) {
+        if (key === STORAGE_KEY) { try { memKeys = JSON.parse(val); } catch(e){} }
+        else if (key === COOLDOWN_KEY) { memLastGen = parseInt(val, 10); }
+        return;
+    }
+    try { localStorage.setItem(key, val); }
+    catch(e) { useMemory = true; safeSetItem(key, val); }
+}
+
+function safeRemoveItem(key) {
+    if (useMemory) {
+        if (key === STORAGE_KEY) memKeys = [];
+        else if (key === COOLDOWN_KEY) memLastGen = 0;
+        return;
+    }
+    try { localStorage.removeItem(key); } catch(e) {}
+}
+
+// ============ FUNÇÕES AUXILIARES ============
+function dbg(msg, type) {
+  var el = document.getElementById('debugLog');
+  if (el) {
+    var cls = type === 'error' ? 'error' : (type === 'ok' ? 'ok' : (type === 'info' ? 'info' : ''));
+    var time = new Date().toLocaleTimeString('pt-BR');
+    el.innerHTML = '<div class="' + cls + '">[' + time + '] ' + msg + '</div>' + el.innerHTML;
+    while (el.children.length > 30) el.removeChild(el.lastChild);
+  }
+}
+
+function pad(n, len) { var s = String(n); while (s.length < len) s = '0' + s; return s; }
+
+function randomSegment() {
+  var s = '', arr = new Uint32Array(4);
+  if (window.crypto && window.crypto.getRandomValues) window.crypto.getRandomValues(arr);
+  else for (var i=0; i<4; i++) arr[i] = Math.floor(Math.random() * 0xFFFFFFFF);
+  for (var i=0; i<4; i++) s += CHARS.charAt(arr[i] % CHARS.length);
+  return s;
+}
+
+function fmtDuration(ms) {
+  if (ms <= 0) return '00:00:00';
+  var t = Math.floor(ms / 1000);
+  return pad(Math.floor(t / 3600), 2) + ':' + pad(Math.floor((t % 3600) / 60), 2) + ':' + pad(t % 60, 2);
+}
+
+function fmtHuman(ms) {
+  if (ms <= 0) return 'Expirada';
+  var t = Math.floor(ms / 1000);
+  var h = Math.floor(t / 3600), m = Math.floor((t % 3600) / 60), s = t % 60;
+  if (h > 0) return h + 'h ' + m + 'm ' + s + 's';
+  if (m > 0) return m + 'm ' + s + 's';
+  return s + 's';
+}
+
+// ============ LÓGICA DO JOGO ============
+function launchGame() {
+  dbg('Abrindo jogo...', 'info');
+  window.location.href = "roblox://placeId=" + MM2_PLACE_ID;
+  setTimeout(function() {
+    window.open("https://www.roblox.com/games/" + MM2_PLACE_ID + "/", "_blank");
+  }, 1000);
+}
+
+// ============ LÓGICA PRINCIPAL ============
+function genKey() {
+  dbg('Processando...', 'info');
+  var btn = document.getElementById('genBtn');
+  btn.textContent = 'GERANDO...';
+
+  setTimeout(function() {
+    var last = parseInt(safeGetItem(COOLDOWN_KEY) || "0", 10);
+    var cd = Math.max(0, (last + COOLDOWN_MS) - Date.now());
+
+    if (cd > 0) {
+      dbg('Bloqueado. Aguarde ' + fmtDuration(cd), 'error');
+      btn.textContent = 'BLOQUEADO';
+      updateGenBtn();
+      return;
+    }
+
+    var now = Date.now();
+    var targetExp = now + TTL_MS;
+
+    var expSeg = encodeExpiry(targetExp);
+    var actualExp = decodeExpiry(expSeg);
+
+    var key = 'HOLLOW-' + randomSegment() + '-' + randomSegment() + '-' + expSeg;
+
+    var display = document.getElementById('keyDisplay');
+    display.textContent = key;
+    display.className = 'keybox';
+
+    var keys = [];
+    try { keys = JSON.parse(safeGetItem(STORAGE_KEY) || "[]"); } catch(e){}
+    keys.unshift({ key: key, created: now, expires: actualExp });
+    if (keys.length > 20) keys.length = 20;
+
+    safeSetItem(STORAGE_KEY, JSON.stringify(keys));
+    safeSetItem(COOLDOWN_KEY, String(now));
+
+    var diff = actualExp - targetExp;
+    dbg('✅ Key gerada!', 'ok');
+    dbg('🔗 Site mostra ' + fmtDuration(actualExp - now) + ' → script verá o mesmo', 'info');
+    if (diff > 0) dbg('⏱ +' + Math.round(diff/60000) + 'min extra (arredondamento pra cima)', 'info');
+
+    startCountdown(actualExp);
+    updateGenBtn();
+    renderHistory();
+  }, 100);
+}
+
+function updateGenBtn() {
+  var btn = document.getElementById('genBtn');
+  var el = document.getElementById('cooldown');
+
+  var last = parseInt(safeGetItem(COOLDOWN_KEY) || "0", 10);
+  var cd = Math.max(0, (last + COOLDOWN_MS) - Date.now());
+
+  if (cd > 0) {
+    btn.disabled = true;
+    btn.textContent = 'AGUARDE';
+    el.style.display = 'block';
+    el.querySelector('strong').textContent = fmtDuration(cd);
+  } else {
+    btn.disabled = false;
+    btn.textContent = 'GERAR KEY';
+    el.style.display = 'none';
+  }
+}
+
+var countdownInterval = null;
+function startCountdown(exp) {
+  var el = document.getElementById('countdown');
+  var timeEl = document.getElementById('cdTime');
+  var badge = document.getElementById('syncBadge');
+  el.style.display = 'block';
+  badge.classList.add('show');
+
+  if (countdownInterval) clearInterval(countdownInterval);
+
+  function tick() {
+    var ms = Math.max(0, exp - Date.now());
+    timeEl.textContent = fmtDuration(ms);
+    if (ms <= 0) {
+      timeEl.style.color = '#ff5050';
+      badge.style.display = 'none';
+      clearInterval(countdownInterval);
+    } else if (ms < 3600000) {
+      timeEl.style.color = '#ffb040';
+    } else {
+      timeEl.style.color = '#50dc78';
+    }
+  }
+
+  tick();
+  countdownInterval = setInterval(tick, 1000);
+}
+
+function clearKeys() {
+  safeRemoveItem(STORAGE_KEY);
+  safeRemoveItem(COOLDOWN_KEY);
+  document.getElementById('keyDisplay').textContent = 'Clique em GERAR KEY';
+  document.getElementById('keyDisplay').className = 'keybox empty';
+  document.getElementById('countdown').style.display = 'none';
+  document.getElementById('syncBadge').classList.remove('show');
+  if (countdownInterval) clearInterval(countdownInterval);
+  dbg('Dados limpos. Pode gerar novamente.', 'ok');
+  updateGenBtn();
+  renderHistory();
+}
+
+function renderHistory() {
+  var list = document.getElementById('historyList');
+  var keys = [];
+  try { keys = JSON.parse(safeGetItem(STORAGE_KEY) || "[]"); } catch(e){}
+
+  if (keys.length === 0) {
+    list.innerHTML = '<div class="empty-history">nenhuma key gerada</div>';
+    return;
+  }
+
+  var html = '';
+  for (var i = 0; i < keys.length; i++) {
+    var k = keys[i];
+    var ms = Math.max(0, k.expires - Date.now());
+    var status = ms <= 0 ? 'expired' : (ms < 3600000 ? 'warn' : 'ok');
+    var dur = ms <= 0 ? 'Expirada' : fmtDuration(ms) + ' (' + fmtHuman(ms) + ')';
+
+    html += '<div class="history-item ' + status + '">' +
+      '<div class="history-key">' + k.key + '</div>' +
+      '<div class="history-meta"><span>Validade: ' + dur + '</span></div></div>';
+  }
+  list.innerHTML = html;
+}
+
+function copyText(txt) {
+  if (!txt || txt === 'Clique em GERAR KEY') return;
+  var ta = document.createElement('textarea');
+  ta.value = txt;
+  ta.style.position = 'fixed';
+  ta.style.top = '-9999px';
+  document.body.appendChild(ta);
+  ta.select();
+  try { document.execCommand('copy'); dbg('📋 Key copiada!', 'ok'); }
+  catch(e) { dbg('Erro ao copiar', 'error'); }
+  document.body.removeChild(ta);
+}
+
+function copyCurrent() {
+  copyText(document.getElementById('keyDisplay').textContent);
+}
+
+function showTab(name, btn) {
+  var panes = document.querySelectorAll('.pane');
+  for (var i = 0; i < panes.length; i++) panes[i].classList.remove('active');
+  var tabs = document.querySelectorAll('.tab');
+  for (var i = 0; i < tabs.length; i++) tabs[i].classList.remove('active');
+  document.getElementById('pane-' + name).classList.add('active');
+  btn.classList.add('active');
+  if (name === 'hist') renderHistory();
+}
+
+// ============ INICIALIZAÇÃO ============
+(function init() {
+  dbg('Sistema iniciado.', 'ok');
+
+  var scriptEpoch = 1704067200000;
+  if (EPOCH_MS === scriptEpoch) {
+    dbg('🔗 EPOCH compatível com script ✅', 'ok');
+  } else {
+    dbg('⚠️ EPOCH diferente do script!', 'error');
+  }
+
+  var keys = [];
+  try { keys = JSON.parse(safeGetItem(STORAGE_KEY) || "[]"); } catch(e){}
+  if (keys.length > 0 && keys[0].expires > Date.now()) {
+    var d = document.getElementById('keyDisplay');
+    d.textContent = keys[0].key;
+    d.className = 'keybox';
+    startCountdown(keys[0].expires);
+    dbg('📄 Última key carregada automaticamente', 'info');
+  }
+
+  updateGenBtn();
+  setInterval(updateGenBtn, 1000);
+})();
+</script>
+</body>
+  </html>
